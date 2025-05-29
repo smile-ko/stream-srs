@@ -1,7 +1,7 @@
 # SRS WebRTC Streaming Server
 
 This repository contains a setup for streaming with SRS (Simple RTMP Server) using WebRTC. It includes tools to test bandwidth usage for WebRTC streams.
-<img width="1242" alt="Screenshot 2025-05-29 at 16 56 48" src="https://github.com/user-attachments/assets/5956dbde-2fe8-446b-af83-87c19cf66a32" />
+<img width="1135" alt="Screenshot 2025-05-29 at 16 57 37" src="https://github.com/user-attachments/assets/854362d5-4414-422c-b31a-f8670371f6a7" />
 
 
 ## Features
