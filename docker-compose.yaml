@@ -1,0 +1,18 @@
+services:
+  srs:
+    image: ossrs/srs:5
+    container_name: srs-hls
+    ports:
+      - "1935:1935" # RTMP
+      - "1985:1985" # API
+      - "8080:8080" # HTTP Server (for HLS)
+      - "8000:8000" # WebRTC
+      - "8000:8000/udp" # WebRTC UDP
+    volumes:
+      - ./srs.conf:/usr/local/srs/conf/srs.conf
+    environment:
+      - SRS_LOG_LEVEL=trace
+      - SRS_STAT_NETWORK=1
+    restart: unless-stopped
+    tty: true
+    stdin_open: true

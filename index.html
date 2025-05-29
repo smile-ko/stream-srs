@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SRS WebRTC Publisher with Bandwidth Test</title>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .main-content {
+        flex: 1;
+        min-width: 500px;
+        padding-right: 20px;
+      }
+      .stats-container {
+        margin-left: 20px;
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+      }
+      .video-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px 0;
+      }
+      video {
+        width: 100%;
+        max-width: 640px;
+        background-color: #000;
+        border-radius: 4px;
+        transform: scaleX(
+          -1
+        ); /* Flip video horizontally to correct mirroring */
+      }
+      .controls {
+        margin: 15px 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+      button {
+        padding: 8px 16px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+      .stats-panel {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #f9f9f9;
+        border-radius: 4px;
+      }
+      #stats {
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+      .input-group {
+        margin: 10px 0;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .error {
+        color: red;
+        margin: 10px 0;
+      }
+      .bandwidth-control {
+        margin: 10px 0;
+      }
+      .bandwidth-control label {
+        display: inline-block;
+        width: 150px;
+      }
+      .bandwidth-control input {
+        width: 100px;
+        margin-right: 5px;
+      }
+      .bandwidth-control button {
+        padding: 5px 10px;
+      }
+      .video-config {
+        margin: 15px 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+      .video-config input {
+        width: 70px;
+        margin-right: 5px;
+      }
+      .video-config label {
+        margin-right: 5px;
+      }
+      .video-config button {
+        margin-left: 10px;
+      }
+      .presets-dropdown {
+        margin: 10px 0;
+        text-align: center;
+      }
+      .presets-dropdown select {
+        padding: 5px;
+        border-radius: 4px;
+        margin-right: 5px;
+      }
+      .current-settings {
+        margin: 10px 0;
+        padding: 8px;
+        background-color: #f0f0f0;
+        border-radius: 4px;
+        text-align: center;
+        font-family: monospace;
+        font-size: 14px;
+      }
+      .stats-tabs {
+        display: flex;
+        margin-bottom: 10px;
+      }
+      .stats-tab {
+        padding: 8px 16px;
+        cursor: pointer;
+        background-color: #e0e0e0;
+        border: 1px solid #ccc;
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+        margin-right: 4px;
+      }
+      .stats-tab.active {
+        background-color: #f9f9f9;
+        border-bottom: 1px solid #f9f9f9;
+        margin-bottom: -1px;
+      }
+      .stats-content {
+        display: none;
+      }
+      .stats-content.active {
+        display: block;
+      }
+      .estimate-button {
+        padding: 5px 10px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .estimate-button:hover {
+        background-color: #45a049;
+      }
+      .estimate-results,
+      .estimate-bandwidth {
+        background-color: #f0f0f0;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+      .estimate-results h4,
+      .estimate-bandwidth h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="main-content">
+        <h1>SRS WebRTC Publisher with Bandwidth Monitor</h1>
+
+        <div class="input-group">
+          <label for="stream-name">Stream Name:</label>
+          <input type="text" id="stream-name" value="stream1" />
+        </div>
+
+        <div class="presets-dropdown">
+          <label for="video-presets">Presets:</label>
+          <select id="video-presets">
+            <option value="">Custom</option>
+            <option value="160-120-10-0.05">Very Low (160×120, 10fps)</option>
+            <option value="320-240-15-0.07">Low (320×240, 15fps)</option>
+            <option value="640-360-15-0.1" selected>
+              Medium (640×360, 15fps)
+            </option>
+            <option value="640-480-30-0.1">SD (640×480, 30fps)</option>
+            <option value="1280-720-15-0.12">HD 720p (15fps)</option>
+            <option value="1280-720-30-0.12">HD 720p (30fps)</option>
+            <option value="1280-720-60-0.1">HD 720p (60fps)</option>
+            <option value="1920-1080-30-0.15">
+              Full HD (1920×1080, 30fps)
+            </option>
+            <option value="360-640-30-0.1">
+              Mobile Portrait (360×640, 30fps)
+            </option>
+            <option value="720-1280-30-0.12">
+              Mobile HD Portrait (720×1280, 30fps)
+            </option>
+          </select>
+          <button id="apply-preset">Apply Preset</button>
+          <button id="detect-camera">Auto-Detect Camera</button>
+        </div>
+
+        <div class="current-settings" id="current-settings">
+          Current: 640×360 @ 15fps, BPP: 0.1, Target Bitrate: 346 kbps
+        </div>
+
+        <div class="video-config">
+          <div>
+            <label for="video-width">Width:</label>
+            <input
+              type="number"
+              id="video-width"
+              value="640"
+              min="160"
+              max="1920"
+              step="16"
+            />
+          </div>
+          <div>
+            <label for="video-height">Height:</label>
+            <input
+              type="number"
+              id="video-height"
+              value="360"
+              min="120"
+              max="1080"
+              step="16"
+            />
+          </div>
+          <div>
+            <label for="video-fps">FPS:</label>
+            <input
+              type="number"
+              id="video-fps"
+              value="15"
+              min="5"
+              max="60"
+              step="1"
+            />
+          </div>
+          <div>
+            <label for="video-bpp">BPP:</label>
+            <input
+              type="number"
+              id="video-bpp"
+              value="0.1"
+              min="0.05"
+              max="0.5"
+              step="0.05"
+            />
+          </div>
+          <button id="apply-video-config" disabled>Apply Video Config</button>
+          <button id="swap-dimensions" title="Swap width and height">
+            ↺ Rotate
+          </button>
+        </div>
+
+        <div class="video-container">
+          <video id="local-video" autoplay muted playsinline></video>
+
+          <div class="controls">
+            <button id="publish-button">Start Publishing</button>
+            <button id="stop-button" disabled>Stop Publishing</button>
+            <button id="test-connection">Test API Connection</button>
+            <button id="flip-video" title="Flip video orientation">
+              Flip Video
+            </button>
+            <div style="margin-top: 10px">
+              <label>
+                <input type="checkbox" id="use-tcp" checked />
+                Use TCP (More reliable but higher latency)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="bandwidth-control">
+          <label for="min-bitrate">Min Bitrate (kbps):</label>
+          <input
+            type="number"
+            id="min-bitrate"
+            value="300"
+            min="100"
+            max="5000"
+          />
+          <label for="max-bitrate">Max Bitrate (kbps):</label>
+          <input
+            type="number"
+            id="max-bitrate"
+            value="1500"
+            min="500"
+            max="10000"
+          />
+          <button id="apply-bitrate" disabled>Apply Bitrate</button>
+        </div>
+
+        <div id="error-message" class="error"></div>
+        <div
+          id="ice-candidates"
+          class="stats-panel"
+          style="max-height: 200px; overflow-y: auto; display: none"
+        ></div>
+      </div>
+      <div class="stats-container">
+        <div class="stats-panel">
+          <h3>Bandwidth Statistics</h3>
+
+          <div class="stats-tabs">
+            <div class="stats-tab active" data-tab="realtime">Realtime</div>
+            <div class="stats-tab" data-tab="minute">Minute</div>
+            <div class="stats-tab" data-tab="hour">Hour</div>
+            <div class="stats-tab" data-tab="total">Total</div>
+            <div class="stats-tab" data-tab="estimate">User Estimate</div>
+          </div>
+
+          <div class="stats-content active" id="realtime-stats">
+            <div id="stats">Waiting for stream to start...</div>
+          </div>
+
+          <div class="stats-content" id="minute-stats">
+            <div>
+              Data Sent (Last Minute): <span id="minute-data">0 MB</span>
+            </div>
+            <div>Average Bitrate: <span id="minute-bitrate">0 kbps</span></div>
+          </div>
+
+          <div class="stats-content" id="hour-stats">
+            <div>Data Sent (Last Hour): <span id="hour-data">0 MB</span></div>
+            <div>Average Bitrate: <span id="hour-bitrate">0 kbps</span></div>
+          </div>
+
+          <div class="stats-content" id="total-stats">
+            <div>
+              Total Stream Duration: <span id="total-duration">00:00:00</span>
+            </div>
+            <div>Total Data Sent: <span id="total-data">0 MB</span></div>
+            <div>Average Bitrate: <span id="total-bitrate">0 kbps</span></div>
+          </div>
+
+          <div class="stats-content" id="estimate-stats">
+            <div style="margin-bottom: 15px">
+              <label for="user-count">Number of Viewers:</label>
+              <input
+                type="number"
+                id="user-count"
+                value="10"
+                min="1"
+                max="10000"
+                style="width: 100px; margin: 0 10px"
+              />
+              <button id="calculate-estimate" class="estimate-button">
+                Calculate
+              </button>
+            </div>
+
+            <div class="estimate-results">
+              <h4>Estimated Data Usage:</h4>
+              <div>Per Minute: <span id="estimate-minute">0 MB</span></div>
+              <div>Per Hour: <span id="estimate-hour">0 MB</span></div>
+              <div>Per Day (24h): <span id="estimate-day">0 GB</span></div>
+              <div>
+                Per Month (30 days): <span id="estimate-month">0 GB</span>
+              </div>
+            </div>
+
+            <div class="estimate-bandwidth" style="margin-top: 15px">
+              <h4>Required Bandwidth:</h4>
+              <div>Upload: <span id="estimate-upload">0 Mbps</span></div>
+              <div>
+                Recommended Server: <span id="estimate-server">0 Mbps</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // DOM elements
+      const localVideo = document.getElementById("local-video");
+      const publishButton = document.getElementById("publish-button");
+      const stopButton = document.getElementById("stop-button");
+      const testButton = document.getElementById("test-connection");
+      const useTcpCheckbox = document.getElementById("use-tcp");
+      const streamNameInput = document.getElementById("stream-name");
+      const statsElement = document.getElementById("stats");
+      const errorElement = document.getElementById("error-message");
+      const minBitrateInput = document.getElementById("min-bitrate");
+      const maxBitrateInput = document.getElementById("max-bitrate");
+      const applyBitrateButton = document.getElementById("apply-bitrate");
+      const iceCandidatesElement = document.getElementById("ice-candidates");
+
+      // Video configuration elements
+      const videoWidthInput = document.getElementById("video-width");
+      const videoHeightInput = document.getElementById("video-height");
+      const videoFpsInput = document.getElementById("video-fps");
+      const videoBppInput = document.getElementById("video-bpp");
+      const applyVideoConfigButton =
+        document.getElementById("apply-video-config");
+      const videoPresetsSelect = document.getElementById("video-presets");
+      const applyPresetButton = document.getElementById("apply-preset");
+      const currentSettingsElement =
+        document.getElementById("current-settings");
+      const swapDimensionsButton = document.getElementById("swap-dimensions");
+      const detectCameraButton = document.getElementById("detect-camera");
+
+      // WebRTC variables
+      let pc = null;
+      let localStream = null;
+      let statsInterval = null;
+      let lastBytesSent = 0;
+      let lastTimestamp = 0;
+      let videoSender = null;
+
+      // Video flipping
+      const flipVideoButton = document.getElementById("flip-video");
+      let isVideoFlipped = true; // Default state (already flipped in CSS)
+
+      // Add event listener for the flip video button
+      if (flipVideoButton) {
+        flipVideoButton.addEventListener("click", () => {
+          isVideoFlipped = !isVideoFlipped;
+          localVideo.style.transform = isVideoFlipped
+            ? "scaleX(-1)"
+            : "scaleX(1)";
+        });
+      }
+
+      const DEBUG = true;
+
+      // Statistics tracking variables
+      let streamStartTime = null;
+      let totalBytesSent = 0;
+
+      // For minute statistics
+      let minuteStartTime = 0;
+      let minuteBytesSent = 0;
+      let minuteDataPoints = [];
+
+      // For hour statistics
+      let hourStartTime = 0;
+      let hourBytesSent = 0;
+      let hourDataPoints = [];
+
+      // Get local IP address and SRS server URL
+      const serverUrl = "192.168.1.4"; // Use explicit hostname for SRS server
+      const serverPort = "1985"; // Use the API port instead of HTTP server port
+      const webrtcPort = "8000"; // WebRTC port
+
+      function log(message, data = null) {
+        if (DEBUG) {
+          if (data) {
+            console.log(message, data);
+          } else {
+            console.log(message);
+          }
+        }
+      }
+
+      // Format time as HH:MM:SS
+      function formatDuration(seconds) {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${hrs.toString().padStart(2, "0")}:${mins
+          .toString()
+          .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+      }
+
+      // Convert bytes to MB with 2 decimal places
+      function formatMB(bytes) {
+        return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+      }
+
+      // Tab switching functionality
+      document.addEventListener("DOMContentLoaded", () => {
+        const tabs = document.querySelectorAll(".stats-tab");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            // Remove active class from all tabs and content
+            document
+              .querySelectorAll(".stats-tab")
+              .forEach((t) => t.classList.remove("active"));
+            document
+              .querySelectorAll(".stats-content")
+              .forEach((c) => c.classList.remove("active"));
+
+            // Add active class to clicked tab
+            tab.classList.add("active");
+
+            // Show corresponding content
+            const tabId = tab.getAttribute("data-tab");
+            document.getElementById(`${tabId}-stats`).classList.add("active");
+          });
+        });
+      });
+
+      // Start publishing the stream
+      publishButton.addEventListener("click", async () => {
+        try {
+          errorElement.textContent = "Starting connection...";
+          const streamName = streamNameInput.value.trim() || "stream1";
+
+          log("Starting media acquisition");
+
+          // Get video config values
+          const videoWidth = parseInt(videoWidthInput.value);
+          const videoHeight = parseInt(videoHeightInput.value);
+          const videoFps = parseInt(videoFpsInput.value);
+          const videoBpp = parseFloat(videoBppInput.value);
+
+          // Calculate bitrate based on resolution, framerate and bpp
+          const calculatedBitrate = Math.round(
+            (videoWidth * videoHeight * videoFps * videoBpp) / 1000
+          );
+
+          // Update bitrate inputs with calculated values
+          if (calculatedBitrate > 0) {
+            // Set min bitrate to 70% of calculated
+            minBitrateInput.value = Math.max(
+              100,
+              Math.round(calculatedBitrate * 0.7)
+            );
+            // Set max bitrate to 130% of calculated
+            maxBitrateInput.value = Math.round(calculatedBitrate * 1.3);
+
+            log(
+              `Calculated bitrate: ${calculatedBitrate}kbps based on ${videoWidth}x${videoHeight}, ${videoFps}fps, ${videoBpp}bpp`
+            );
+          }
+
+          // Get media stream with user constraints
+          const constraints = {
+            audio: {
+              channelCount: 2,
+              echoCancellation: true,
+              autoGainControl: true,
+              noiseSuppression: true,
+            },
+            video: {
+              width: { ideal: videoWidth },
+              height: { ideal: videoHeight },
+              frameRate: { ideal: videoFps },
+            },
+          };
+
+          log("Media constraints:", constraints);
+
+          // Request media with constraints
+          localStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+          // Show stream in local video element
+          localVideo.srcObject = localStream;
+
+          // Check if TCP mode is enabled
+          const useTcp = useTcpCheckbox.checked;
+          log(`Using ${useTcp ? "TCP" : "UDP"} mode for WebRTC`);
+
+          // Create peer connection with more reliable ICE servers
+          const iceServers = [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+          ];
+
+          // Create RTCPeerConnection with connectivity options
+          pc = new RTCPeerConnection({
+            iceServers,
+            iceTransportPolicy: "all",
+            // Set TCP candidates preference if TCP mode is enabled
+            iceCandidatePoolSize: 2,
+            bundlePolicy: "max-bundle",
+          });
+
+          // Add all tracks to peer connection
+          const senders = [];
+          localStream.getTracks().forEach((track) => {
+            const sender = pc.addTrack(track, localStream);
+            if (track.kind === "video") {
+              videoSender = sender;
+            }
+            senders.push(sender);
+          });
+
+          // Create basic offer with explicit media direction
+          log("Creating offer");
+          const offerOptions = {
+            offerToReceiveAudio: false,
+            offerToReceiveVideo: false,
+          };
+
+          const offer = await pc.createOffer(offerOptions);
+
+          // Modify SDP for TCP if needed
+          let sdpToUse = offer.sdp;
+
+          if (useTcp) {
+            // Try to modify SDP to prioritize TCP candidates
+            log("Modifying SDP to prioritize TCP");
+
+            // Add TCP candidate types with higher priority
+            sdpToUse = sdpToUse.replace(
+              /a=ice-options:trickle\r\n/g,
+              "a=ice-options:trickle\r\na=setup:actpass\r\n"
+            );
+
+            // Set transport protocol to TCP if using TCP
+            sdpToUse = sdpToUse.replace(
+              /a=candidate:(\S*) \d+ udp /g,
+              "a=candidate:$1 1 tcp "
+            );
+          }
+
+          // Add bitrate settings to SDP
+          const minBitrate = parseInt(minBitrateInput.value) * 1000; // bps
+          const maxBitrate = parseInt(maxBitrateInput.value) * 1000; // bps
+
+          // Set bandwidth parameters directly in SDP
+          // First add b=AS for overall bandwidth
+          sdpToUse = sdpToUse.replace(
+            /(m=video.*\r\n)/g,
+            `$1b=AS:${Math.floor(maxBitrate / 1000)}\r\n`
+          );
+
+          // Also add TIAS bandwidth param for more precise control
+          sdpToUse = sdpToUse.replace(
+            /(m=video.*\r\n)/g,
+            `$1b=TIAS:${maxBitrate}\r\n`
+          );
+
+          log("Setting local description");
+          await pc.setLocalDescription(
+            new RTCSessionDescription({
+              type: "offer",
+              sdp: sdpToUse,
+            })
+          );
+
+          // Apply bitrate settings to video sender
+          if (videoSender) {
+            try {
+              const params = videoSender.getParameters();
+              if (!params.encodings) {
+                params.encodings = [{}];
+              }
+
+              // Set bitrate constraints
+              params.encodings[0].minBitrate = minBitrate;
+              params.encodings[0].maxBitrate = maxBitrate;
+              params.encodings[0].active = true;
+
+              await videoSender.setParameters(params);
+              log("Initial encoding parameters set:", {
+                minBitrate: minBitrate / 1000 + " kbps",
+                maxBitrate: maxBitrate / 1000 + " kbps",
+              });
+            } catch (e) {
+              console.warn("Failed to set initial encoding parameters:", e);
+            }
+          }
+
+          // Wait a short time to ensure ICE gathering starts
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Send offer to SRS server
+          const url = `http://${serverUrl}:${serverPort}/rtc/v1/publish/`;
+          const data = {
+            api: url,
+            streamurl: `webrtc://${serverUrl}:${webrtcPort}/live/${streamName}`,
+            sdp: pc.localDescription.sdp,
+            // Add connection options
+            trickle: true, // Enable ICE trickle for faster establishment
+            audio: true,
+            video: true,
+          };
+
+          log("Sending request to:", url);
+          errorElement.textContent = "Connecting to SRS server...";
+
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+            },
+            mode: "cors",
+            credentials: "omit",
+            body: JSON.stringify(data),
+          });
+
+          log("Response status:", response.status);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          const responseText = await response.text();
+          log("Raw response:", responseText);
+
+          let json;
+          try {
+            json = responseText ? JSON.parse(responseText) : null;
+          } catch (e) {
+            throw new Error(
+              `JSON parse error: ${e.message}, Raw text: ${responseText}`
+            );
+          }
+
+          if (!json) {
+            throw new Error("Empty response from server");
+          }
+
+          if (json.code !== 0) {
+            throw new Error(`Server error: ${json.code} ${json.reason}`);
+          }
+
+          log("SRS response:", json);
+          errorElement.textContent =
+            "Got server response, setting up connection...";
+
+          // Set the remote SDP description from server response
+          log("Setting remote description");
+          await pc.setRemoteDescription(
+            new RTCSessionDescription({
+              type: "answer",
+              sdp: json.sdp,
+            })
+          );
+
+          errorElement.textContent = "Connecting...waiting for ICE to complete";
+
+          // Enable stop button and disable publish button
+          publishButton.disabled = true;
+          stopButton.disabled = false;
+          applyBitrateButton.disabled = false;
+          applyVideoConfigButton.disabled = false;
+
+          // Start collecting statistics
+          startStatsCollection();
+
+          log("Setup completed, waiting for connection");
+
+          // Add event handlers for connection state
+          pc.oniceconnectionstatechange = () => {
+            log("ICE connection state changed:", pc.iceConnectionState);
+            if (
+              pc.iceConnectionState === "disconnected" ||
+              pc.iceConnectionState === "failed"
+            ) {
+              errorElement.textContent = `ICE connection ${pc.iceConnectionState}. Trying to reconnect...`;
+              // Optional: Attempt reconnection after short delay
+              setTimeout(() => {
+                if (
+                  pc &&
+                  (pc.iceConnectionState === "disconnected" ||
+                    pc.iceConnectionState === "failed")
+                ) {
+                  log("Attempting to restart ICE");
+                  pc.restartIce();
+                }
+              }, 2000);
+            } else if (pc.iceConnectionState === "connected") {
+              errorElement.textContent = "Connected successfully!";
+            }
+          };
+
+          pc.onconnectionstatechange = () => {
+            log("Connection state changed:", pc.connectionState);
+            if (pc.connectionState === "connected") {
+              errorElement.textContent = "Media connection established!";
+            } else if (pc.connectionState === "failed") {
+              errorElement.textContent = "Connection failed. Please try again.";
+            }
+          };
+        } catch (error) {
+          console.error("Publishing failed:", error);
+          errorElement.textContent = `Error: ${error.message}`;
+          stopPublishing();
+        }
+      });
+
+      // Stop publishing function
+      stopButton.addEventListener("click", stopPublishing);
+
+      function stopPublishing() {
+        // Stop stats collection
+        if (statsInterval) {
+          clearInterval(statsInterval);
+          statsInterval = null;
+        }
+
+        // Close peer connection
+        if (pc) {
+          pc.close();
+          pc = null;
+        }
+
+        // Stop all tracks in local stream
+        if (localStream) {
+          localStream.getTracks().forEach((track) => track.stop());
+          localStream = null;
+          localVideo.srcObject = null;
+        }
+
+        // Reset UI
+        publishButton.disabled = false;
+        stopButton.disabled = true;
+        applyBitrateButton.disabled = true;
+        applyVideoConfigButton.disabled = true;
+        statsElement.textContent = "Streaming stopped";
+
+        // Save final stats before reset
+        const finalDuration = streamStartTime
+          ? Math.floor((Date.now() - streamStartTime) / 1000)
+          : 0;
+        const finalData = totalBytesSent;
+
+        // Reset statistics tracking variables
+        streamStartTime = null;
+        totalBytesSent = 0;
+        minuteDataPoints = [];
+        hourDataPoints = [];
+
+        // Display final stats
+        document.getElementById("total-duration").textContent =
+          formatDuration(finalDuration);
+        document.getElementById("total-data").textContent = formatMB(finalData);
+
+        // Clear ICE candidates display
+        if (DEBUG) {
+          iceCandidatesElement.innerHTML = "";
+          iceCandidatesElement.style.display = "none";
+        }
+      }
+
+      // Start collecting WebRTC stats
+      function startStatsCollection() {
+        lastBytesSent = 0;
+        lastTimestamp = Date.now();
+
+        // Initialize stream tracking
+        if (!streamStartTime) {
+          streamStartTime = Date.now();
+          minuteStartTime = Date.now();
+          hourStartTime = Date.now();
+          totalBytesSent = 0;
+          minuteBytesSent = 0;
+          hourBytesSent = 0;
+          minuteDataPoints = [];
+          hourDataPoints = [];
+        }
+
+        log("Starting stats collection");
+
+        statsInterval = setInterval(async () => {
+          if (!pc) return;
+
+          try {
+            log("Collecting stats...");
+
+            const stats = await pc.getStats();
+            let currentBytesSent = 0;
+            let currentTimestamp = Date.now();
+            let videoHeight = 0;
+            let videoWidth = 0;
+            let videoFrameRate = 0;
+            let audioCodec = "";
+            let videoCodec = "";
+            let packetsSent = 0;
+            let framesEncoded = 0;
+            let videoBytesSent = 0;
+            let audioBytesSent = 0;
+            let targetBitrate = 0;
+            let qualityLimitationReason = "";
+
+            // For debugging, log key stats types
+            if (DEBUG) {
+              stats.forEach((report) => {
+                if (
+                  report.type === "outbound-rtp" ||
+                  report.type === "remote-inbound-rtp" ||
+                  (report.type === "candidate-pair" &&
+                    report.state === "succeeded")
+                ) {
+                  log(`${report.type} report:`, report);
+                }
+              });
+            }
+
+            stats.forEach((report) => {
+              if (report.type === "outbound-rtp") {
+                if (report.kind === "video") {
+                  videoBytesSent = report.bytesSent || 0;
+                  currentBytesSent += videoBytesSent;
+                  videoFrameRate = report.framesPerSecond || 0;
+                  packetsSent += report.packetsSent || 0;
+                  framesEncoded += report.framesEncoded || 0;
+                  targetBitrate = report.targetBitrate || 0;
+                  qualityLimitationReason =
+                    report.qualityLimitationReason || "";
+
+                  log("Video outbound stats:", {
+                    bytesSent: videoBytesSent,
+                    framesPerSecond: videoFrameRate,
+                    packetsSent: packetsSent,
+                    framesEncoded: framesEncoded,
+                    targetBitrate: targetBitrate / 1000 + " kbps",
+                    qualityLimitationReason: qualityLimitationReason,
+                  });
+
+                  // Auto-adjust based on limitation reason
+                  if (qualityLimitationReason === "bandwidth") {
+                    // Reduce bitrate by 20%
+                    const currentMaxBitrate = parseInt(maxBitrateInput.value);
+                    const newMaxBitrate = Math.max(
+                      300,
+                      Math.floor(currentMaxBitrate * 0.8)
+                    );
+                    if (newMaxBitrate < currentMaxBitrate) {
+                      log(
+                        `Auto-reducing bitrate due to bandwidth limitation to ${newMaxBitrate}kbps`
+                      );
+                      maxBitrateInput.value = newMaxBitrate;
+                      applyBitrateSettings();
+                    }
+                  }
+                } else if (report.kind === "audio") {
+                  audioBytesSent = report.bytesSent || 0;
+                  currentBytesSent += audioBytesSent;
+                  log("Audio outbound stats:", { bytesSent: audioBytesSent });
+                }
+              } else if (report.type === "track" && report.kind === "video") {
+                videoHeight = report.frameHeight || 0;
+                videoWidth = report.frameWidth || 0;
+                log("Video track stats:", {
+                  width: videoWidth,
+                  height: videoHeight,
+                  framesEncoded: report.framesEncoded,
+                  framesSent: report.framesSent,
+                });
+              } else if (report.type === "codec") {
+                if (
+                  report.mimeType &&
+                  report.mimeType.indexOf("audio") !== -1
+                ) {
+                  audioCodec = report.mimeType;
+                } else if (
+                  report.mimeType &&
+                  report.mimeType.indexOf("video") !== -1
+                ) {
+                  videoCodec = report.mimeType;
+                }
+              } else if (
+                report.type === "candidate-pair" &&
+                report.state === "succeeded"
+              ) {
+                log("Active candidate pair:", {
+                  availableOutgoingBitrate: report.availableOutgoingBitrate,
+                  currentRoundTripTime: report.currentRoundTripTime,
+                });
+              }
+            });
+
+            const timeDiff = (currentTimestamp - lastTimestamp) / 1000; // in seconds
+            if (timeDiff > 0) {
+              const bytesDiff = currentBytesSent - lastBytesSent;
+              const bitrateKbps = Math.round((bytesDiff * 8) / timeDiff / 1000);
+
+              const videoBitrateKbps =
+                videoBytesSent > 0
+                  ? Math.round(
+                      ((videoBytesSent - (lastBytesSent - audioBytesSent)) *
+                        8) /
+                        timeDiff /
+                        1000
+                    )
+                  : 0;
+
+              const audioBitrateKbps =
+                audioBytesSent > 0
+                  ? Math.round(
+                      ((audioBytesSent - (lastBytesSent - videoBytesSent)) *
+                        8) /
+                        timeDiff /
+                        1000
+                    )
+                  : 0;
+
+              log("Stats calculation:", {
+                currentBytesSent,
+                lastBytesSent,
+                bytesDiff,
+                timeDiff,
+                totalBitrateKbps: bitrateKbps,
+                videoBitrateKbps,
+                audioBitrateKbps,
+              });
+
+              // Update realtime stats display
+              statsElement.textContent =
+                `Total Bandwidth: ${bitrateKbps} kbps\n` +
+                `Video Bandwidth: ${videoBitrateKbps} kbps\n` +
+                `Audio Bandwidth: ${audioBitrateKbps} kbps\n` +
+                `Video Resolution: ${videoWidth}x${videoHeight}\n` +
+                `Frame Rate: ${videoFrameRate} fps\n` +
+                `BPP: ${(
+                  (videoBitrateKbps /
+                    (videoWidth * videoHeight * videoFrameRate)) *
+                  1000
+                ).toFixed(3)}\n` +
+                `Frames Encoded: ${framesEncoded}\n` +
+                `Packets Sent: ${packetsSent}\n` +
+                `Video Codec: ${videoCodec}\n` +
+                `Audio Codec: ${audioCodec}\n` +
+                `Quality Limitation: ${qualityLimitationReason}\n` +
+                `Data Sent: ${formatMB(currentBytesSent)}\n` +
+                `Time: ${new Date().toLocaleTimeString()}\n` +
+                `Connection: ${pc.iceConnectionState}`;
+
+              // Update total bytes sent
+              if (bytesDiff > 0) {
+                totalBytesSent += bytesDiff;
+              }
+
+              // Update minute statistics
+              const minuteElapsed = (currentTimestamp - minuteStartTime) / 1000;
+              minuteDataPoints.push({
+                timestamp: currentTimestamp,
+                bytes: bytesDiff,
+                bitrate: bitrateKbps,
+              });
+
+              // Keep only data points from the last minute
+              const minuteAgo = currentTimestamp - 60000;
+              minuteDataPoints = minuteDataPoints.filter(
+                (point) => point.timestamp >= minuteAgo
+              );
+
+              // Calculate minute statistics
+              let minuteTotalBytes = 0;
+              let minuteTotalBitrate = 0;
+
+              minuteDataPoints.forEach((point) => {
+                minuteTotalBytes += point.bytes;
+                minuteTotalBitrate += point.bitrate;
+              });
+
+              const minuteAvgBitrate =
+                minuteDataPoints.length > 0
+                  ? Math.round(minuteTotalBitrate / minuteDataPoints.length)
+                  : 0;
+
+              // Update minute stats display
+              document.getElementById("minute-data").textContent =
+                formatMB(minuteTotalBytes);
+              document.getElementById("minute-bitrate").textContent =
+                minuteAvgBitrate + " kbps";
+
+              // Update hour statistics
+              hourDataPoints.push({
+                timestamp: currentTimestamp,
+                bytes: bytesDiff,
+                bitrate: bitrateKbps,
+              });
+
+              // Keep only data points from the last hour
+              const hourAgo = currentTimestamp - 3600000;
+              hourDataPoints = hourDataPoints.filter(
+                (point) => point.timestamp >= hourAgo
+              );
+
+              // Calculate hour statistics
+              let hourTotalBytes = 0;
+              let hourTotalBitrate = 0;
+
+              hourDataPoints.forEach((point) => {
+                hourTotalBytes += point.bytes;
+                hourTotalBitrate += point.bitrate;
+              });
+
+              const hourAvgBitrate =
+                hourDataPoints.length > 0
+                  ? Math.round(hourTotalBitrate / hourDataPoints.length)
+                  : 0;
+
+              // Update hour stats display
+              document.getElementById("hour-data").textContent =
+                formatMB(hourTotalBytes);
+              document.getElementById("hour-bitrate").textContent =
+                hourAvgBitrate + " kbps";
+
+              // Update total stats
+              const totalDurationSeconds = Math.floor(
+                (currentTimestamp - streamStartTime) / 1000
+              );
+              const totalAvgBitrate =
+                totalDurationSeconds > 0
+                  ? Math.round(
+                      (totalBytesSent * 8) / totalDurationSeconds / 1000
+                    )
+                  : 0;
+
+              document.getElementById("total-duration").textContent =
+                formatDuration(totalDurationSeconds);
+              document.getElementById("total-data").textContent =
+                formatMB(totalBytesSent);
+              document.getElementById("total-bitrate").textContent =
+                totalAvgBitrate + " kbps";
+
+              // Update last values for next calculation
+              lastBytesSent = currentBytesSent;
+              lastTimestamp = currentTimestamp;
+
+              // Update user estimates every 10 seconds
+              if (currentTimestamp % 10000 < 1000) {
+                calculateUserEstimates();
+              }
+            }
+          } catch (error) {
+            log("Error collecting stats:", error);
+          }
+        }, 1000);
+      }
+
+      // Format bytes to human-readable form
+      function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return "0 Bytes";
+
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return (
+          parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
+        );
+      }
+
+      // Format GB with 2 decimal places
+      function formatGB(bytes) {
+        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+      }
+
+      // Format Mbps with 2 decimal places
+      function formatMbps(bitsPerSecond) {
+        return (bitsPerSecond / 1000000).toFixed(2) + " Mbps";
+      }
+
+      // Calculate user estimates
+      function calculateUserEstimates() {
+        const userCount =
+          parseInt(document.getElementById("user-count").value) || 10;
+
+        // Get current bitrate or use a default if not streaming
+        let currentBitrate = 0;
+
+        // Try to get the actual bitrate from the video sender if available
+        if (videoSender && pc && pc.connectionState === "connected") {
+          try {
+            const params = videoSender.getParameters();
+            if (params.encodings && params.encodings[0].maxBitrate) {
+              currentBitrate = params.encodings[0].maxBitrate / 1000; // Convert to kbps
+            }
+          } catch (e) {
+            console.warn("Could not get current bitrate from sender", e);
+          }
+        }
+
+        // If we couldn't get the actual bitrate, calculate from the input values
+        if (currentBitrate <= 0) {
+          const videoWidth = parseInt(videoWidthInput.value);
+          const videoHeight = parseInt(videoHeightInput.value);
+          const videoFps = parseInt(videoFpsInput.value);
+          const videoBpp = parseFloat(videoBppInput.value);
+
+          currentBitrate = Math.round(
+            (videoWidth * videoHeight * videoFps * videoBpp) / 1000
+          );
+        }
+
+        // Add 64kbps for audio (typical stereo audio bitrate)
+        const totalBitrateKbps = currentBitrate + 64;
+
+        // Calculate data per user per second in bytes
+        const bytesPerSecondPerUser = (totalBitrateKbps * 1000) / 8;
+
+        // Calculate total data for all users
+        const totalBytesPerSecond = bytesPerSecondPerUser * userCount;
+
+        // Calculate different time periods
+        const bytesPerMinute = totalBytesPerSecond * 60;
+        const bytesPerHour = bytesPerMinute * 60;
+        const bytesPerDay = bytesPerHour * 24;
+        const bytesPerMonth = bytesPerDay * 30;
+
+        // Update the display
+        document.getElementById("estimate-minute").textContent =
+          formatMB(bytesPerMinute);
+        document.getElementById("estimate-hour").textContent =
+          formatMB(bytesPerHour);
+        document.getElementById("estimate-day").textContent =
+          formatGB(bytesPerDay);
+        document.getElementById("estimate-month").textContent =
+          formatGB(bytesPerMonth);
+
+        // Calculate bandwidth requirements
+        const uploadBandwidthMbps = (totalBitrateKbps / 1000) * 1.1; // Add 10% overhead
+        const serverBandwidthMbps = uploadBandwidthMbps * 1.5; // Add 50% overhead for server
+
+        document.getElementById("estimate-upload").textContent = formatMbps(
+          uploadBandwidthMbps * 1000000
+        );
+        document.getElementById("estimate-server").textContent = formatMbps(
+          serverBandwidthMbps * 1000000
+        );
+      }
+
+      // Add event listener for the calculate button
+      document.addEventListener("DOMContentLoaded", () => {
+        const calculateButton = document.getElementById("calculate-estimate");
+        if (calculateButton) {
+          calculateButton.addEventListener("click", calculateUserEstimates);
+        }
+
+        // Also calculate when the user changes the input directly
+        const userCountInput = document.getElementById("user-count");
+        if (userCountInput) {
+          userCountInput.addEventListener("change", calculateUserEstimates);
+        }
+
+        // Calculate initial estimates
+        setTimeout(calculateUserEstimates, 500);
+      });
+
+      // Test API connection
+      testButton.addEventListener("click", async () => {
+        try {
+          errorElement.textContent = "Testing API connection...";
+
+          // Test URL
+          const testUrl = `http://${serverUrl}:${serverPort}/api/v1/version`;
+
+          // Log the test attempt
+          log(`Testing API connection to ${testUrl}`);
+
+          // Try to fetch the version API
+          const response = await fetch(testUrl, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            // Add this for CORS
+            mode: "cors",
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          log("API connection test result:", data);
+
+          // Update the status
+          errorElement.textContent = `API connection successful: ${JSON.stringify(
+            data
+          )}`;
+
+          // Now test WebRTC port via a simple POST with similar headers
+          const webrtcTestUrl = `http://${serverUrl}:${serverPort}/rtc/v1/`;
+          log(`Testing WebRTC API endpoint at ${webrtcTestUrl}`);
+
+          try {
+            const rtcResponse = await fetch(webrtcTestUrl, {
+              method: "OPTIONS",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              mode: "cors",
+            });
+
+            log("WebRTC API test response:", {
+              status: rtcResponse.status,
+              statusText: rtcResponse.statusText,
+              headers: [...rtcResponse.headers.entries()]
+                .map((h) => `${h[0]}: ${h[1]}`)
+                .join(", "),
+            });
+          } catch (rtcError) {
+            log("WebRTC API test error:", rtcError);
+            // Non-fatal test, so just log it
+          }
+        } catch (error) {
+          log("API connection test error:", error);
+          errorElement.textContent = `API connection error: ${error.message}`;
+        }
+      });
+
+      // Apply bitrate settings to WebRTC
+      async function applyBitrateSettings() {
+        if (!pc || !videoSender) {
+          errorElement.textContent = "No active connection";
+          return;
+        }
+
+        try {
+          const minBitrate = parseInt(minBitrateInput.value) * 1000; // Convert to bps
+          const maxBitrate = parseInt(maxBitrateInput.value) * 1000; // Convert to bps
+
+          const params = videoSender.getParameters();
+
+          if (!params.encodings) {
+            params.encodings = [{}];
+          }
+
+          // Set bitrate constraints
+          params.encodings[0].minBitrate = minBitrate;
+          params.encodings[0].maxBitrate = maxBitrate;
+
+          // Force active encoding
+          params.encodings[0].active = true;
+
+          log("Applying new bitrate settings", {
+            minBitrate: minBitrate / 1000 + " kbps",
+            maxBitrate: maxBitrate / 1000 + " kbps",
+          });
+
+          await videoSender.setParameters(params);
+          errorElement.textContent = `Bitrate set to min: ${
+            minBitrate / 1000
+          }kbps, max: ${maxBitrate / 1000}kbps`;
+
+          // Also adjust resolution if bandwidth is low
+          if (maxBitrate < 500000) {
+            // Less than 500kbps
+            adjustVideoQuality("low");
+          } else if (maxBitrate < 1500000) {
+            // Between 500kbps and 1.5Mbps
+            adjustVideoQuality("medium");
+          } else {
+            adjustVideoQuality("high");
+          }
+        } catch (e) {
+          errorElement.textContent = `Failed to set bitrate: ${e.message}`;
+          console.error("Error setting bitrate:", e);
+        }
+      }
+
+      // Function to adjust video quality based on bitrate
+      function adjustVideoQuality(quality) {
+        if (!localStream) return;
+
+        try {
+          const videoTrack = localStream.getVideoTracks()[0];
+          if (!videoTrack) return;
+
+          let constraints;
+
+          switch (quality) {
+            case "low":
+              constraints = { width: 320, height: 240, frameRate: 10 };
+              break;
+            case "medium":
+              constraints = { width: 640, height: 360, frameRate: 15 };
+              break;
+            case "high":
+              constraints = { width: 1280, height: 720, frameRate: 30 };
+              break;
+            default:
+              constraints = { width: 640, height: 360, frameRate: 15 };
+          }
+
+          videoTrack
+            .applyConstraints(constraints)
+            .then(() => {
+              log(`Applied ${quality} quality constraints:`, constraints);
+            })
+            .catch((err) => {
+              log(`Error applying video constraints: ${err.message}`);
+            });
+        } catch (err) {
+          log(`Error in quality adjustment: ${err.message}`);
+        }
+      }
+
+      // Apply video configuration to active stream
+      applyVideoConfigButton.addEventListener("click", applyVideoConfig);
+
+      // Apply preset configuration
+      applyPresetButton.addEventListener("click", () => {
+        const presetValue = videoPresetsSelect.value;
+        if (!presetValue) return;
+
+        const [width, height, fps, bpp] = presetValue.split("-");
+
+        videoWidthInput.value = width;
+        videoHeightInput.value = height;
+        videoFpsInput.value = fps;
+        videoBppInput.value = bpp;
+
+        // Update current settings display
+        updateCurrentSettings();
+
+        // If stream is active, apply the new config
+        if (!applyVideoConfigButton.disabled) {
+          applyVideoConfig();
+        } else {
+          errorElement.textContent = `Preset configuration set: ${width}×${height} at ${fps}fps`;
+        }
+      });
+
+      // Update current settings display
+      function updateCurrentSettings() {
+        const width = parseInt(videoWidthInput.value);
+        const height = parseInt(videoHeightInput.value);
+        const fps = parseInt(videoFpsInput.value);
+        const bpp = parseFloat(videoBppInput.value);
+        const bitrate = Math.round((width * height * fps * bpp) / 1000);
+
+        currentSettingsElement.textContent = `Current: ${width}×${height} @ ${fps}fps, BPP: ${bpp}, Target Bitrate: ${bitrate} kbps`;
+      }
+
+      // Initialize current settings display
+      updateCurrentSettings();
+
+      // Add change listeners to update current settings display
+      videoWidthInput.addEventListener("change", updateCurrentSettings);
+      videoHeightInput.addEventListener("change", updateCurrentSettings);
+      videoFpsInput.addEventListener("change", updateCurrentSettings);
+      videoBppInput.addEventListener("change", updateCurrentSettings);
+
+      // Apply video configuration function
+      async function applyVideoConfig() {
+        if (!localStream) {
+          errorElement.textContent = "No active stream to configure";
+          return;
+        }
+
+        try {
+          const videoTrack = localStream.getVideoTracks()[0];
+          if (!videoTrack) {
+            errorElement.textContent = "No video track found";
+            return;
+          }
+
+          // Get video config values
+          const videoWidth = parseInt(videoWidthInput.value);
+          const videoHeight = parseInt(videoHeightInput.value);
+          const videoFps = parseInt(videoFpsInput.value);
+          const videoBpp = parseFloat(videoBppInput.value);
+
+          // Calculate new bitrate based on resolution, framerate and bpp
+          const calculatedBitrate = Math.round(
+            (videoWidth * videoHeight * videoFps * videoBpp) / 1000
+          );
+
+          // Apply video constraints
+          const constraints = {
+            width: { ideal: videoWidth },
+            height: { ideal: videoHeight },
+            frameRate: { ideal: videoFps },
+          };
+
+          log(`Applying video constraints: ${JSON.stringify(constraints)}`);
+          await videoTrack.applyConstraints(constraints);
+
+          // Update bitrate based on new resolution
+          if (calculatedBitrate > 0) {
+            // Set min bitrate to 70% of calculated
+            minBitrateInput.value = Math.max(
+              100,
+              Math.round(calculatedBitrate * 0.7)
+            );
+            // Set max bitrate to 130% of calculated
+            maxBitrateInput.value = Math.round(calculatedBitrate * 1.3);
+
+            // Also apply the new bitrate settings
+            await applyBitrateSettings();
+          }
+
+          // Update current settings display
+          updateCurrentSettings();
+
+          errorElement.textContent = `Video configuration updated to ${videoWidth}x${videoHeight} at ${videoFps}fps`;
+        } catch (e) {
+          errorElement.textContent = `Failed to apply video config: ${e.message}`;
+          console.error("Error applying video config:", e);
+        }
+      }
+
+      // Swap dimensions (rotate camera view)
+      swapDimensionsButton.addEventListener("click", () => {
+        const tempWidth = videoWidthInput.value;
+        videoWidthInput.value = videoHeightInput.value;
+        videoHeightInput.value = tempWidth;
+
+        updateCurrentSettings();
+
+        // If stream is active, apply the new config
+        if (!applyVideoConfigButton.disabled) {
+          applyVideoConfig();
+        } else {
+          errorElement.textContent = `Rotated dimensions: ${videoWidthInput.value}×${videoHeightInput.value}`;
+        }
+      });
+
+      // Auto-detect camera capabilities
+      detectCameraButton.addEventListener("click", async () => {
+        try {
+          errorElement.textContent = "Detecting camera capabilities...";
+
+          // Get a temporary stream to check capabilities
+          const tempStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+
+          // Get video track to check capabilities
+          const videoTrack = tempStream.getVideoTracks()[0];
+          if (!videoTrack) {
+            errorElement.textContent = "Could not detect camera";
+            return;
+          }
+
+          // Get capabilities
+          const capabilities = videoTrack.getCapabilities();
+          log("Camera capabilities:", capabilities);
+
+          // Stop the temporary stream
+          tempStream.getTracks().forEach((track) => track.stop());
+
+          // Extract resolution info
+          if (capabilities && capabilities.width && capabilities.height) {
+            // Set to the max supported resolution
+            let maxWidth = capabilities.width.max;
+            let maxHeight = capabilities.height.max;
+
+            // Limit to reasonable resolutions based on aspect ratio
+            const aspectRatio = maxWidth / maxHeight;
+
+            // Cap max resolution at 1080p
+            if (maxHeight > 1080) {
+              maxHeight = 1080;
+              maxWidth = Math.round(maxHeight * aspectRatio);
+            }
+
+            // Round to common values
+            const commonHeights = [240, 360, 480, 720, 1080];
+            const bestHeight = commonHeights.reduce((prev, curr) =>
+              Math.abs(curr - maxHeight) < Math.abs(prev - maxHeight)
+                ? curr
+                : prev
+            );
+
+            const bestWidth = Math.round((bestHeight * aspectRatio) / 16) * 16; // Round to multiple of 16
+
+            // Determine suitable fps
+            let bestFps = 30;
+            if (capabilities.frameRate && capabilities.frameRate.max) {
+              if (capabilities.frameRate.max < 20) bestFps = 15;
+              else if (capabilities.frameRate.max > 50) bestFps = 60;
+            }
+
+            // Update inputs
+            videoWidthInput.value = bestWidth;
+            videoHeightInput.value = bestHeight;
+            videoFpsInput.value = bestFps;
+
+            // Pick appropriate BPP based on resolution
+            if (bestHeight <= 360) videoBppInput.value = 0.1;
+            else if (bestHeight <= 720) videoBppInput.value = 0.12;
+            else videoBppInput.value = 0.15;
+
+            updateCurrentSettings();
+            errorElement.textContent = `Camera detected: ${bestWidth}×${bestHeight} at ${bestFps}fps`;
+          } else {
+            errorElement.textContent = "Could not detect camera resolution";
+          }
+        } catch (error) {
+          errorElement.textContent = `Error detecting camera: ${error.message}`;
+          console.error("Error detecting camera:", error);
+        }
+      });
+    </script>
+  </body>
+</html>
