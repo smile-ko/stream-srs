@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>SRS WebRTC Publisher with Bandwidth Test</title>
@@ -544,7 +544,7 @@
 
           // Calculate bitrate based on resolution, framerate and bpp
           const calculatedBitrate = Math.round(
-            (videoWidth * videoHeight * videoFps * videoBpp) / 1000,
+            (videoWidth * videoHeight * videoFps * videoBpp) / 1000
           );
 
           // Update bitrate inputs with calculated values
@@ -552,13 +552,13 @@
             // Set min bitrate to 70% of calculated
             minBitrateInput.value = Math.max(
               100,
-              Math.round(calculatedBitrate * 0.7),
+              Math.round(calculatedBitrate * 0.7)
             );
             // Set max bitrate to 130% of calculated
             maxBitrateInput.value = Math.round(calculatedBitrate * 1.3);
 
             log(
-              `Calculated bitrate: ${calculatedBitrate}kbps based on ${videoWidth}x${videoHeight}, ${videoFps}fps, ${videoBpp}bpp`,
+              `Calculated bitrate: ${calculatedBitrate}kbps based on ${videoWidth}x${videoHeight}, ${videoFps}fps, ${videoBpp}bpp`
             );
           }
 
@@ -594,6 +594,15 @@
           const iceServers = [
             { urls: "stun:stun.l.google.com:19302" },
             { urls: "stun:stun1.l.google.com:19302" },
+            {
+              urls: [
+                "stun:localhost:3478",
+                "turn:localhost:3478",
+                "turns:localhost:5349",
+              ],
+              username: "coturn",
+              credential: "coturn",
+            },
           ];
 
           // Create RTCPeerConnection with connectivity options
@@ -634,13 +643,13 @@
             // Add TCP candidate types with higher priority
             sdpToUse = sdpToUse.replace(
               /a=ice-options:trickle\r\n/g,
-              "a=ice-options:trickle\r\na=setup:actpass\r\n",
+              "a=ice-options:trickle\r\na=setup:actpass\r\n"
             );
 
             // Set transport protocol to TCP if using TCP
             sdpToUse = sdpToUse.replace(
               /a=candidate:(\S*) \d+ udp /g,
-              "a=candidate:$1 1 tcp ",
+              "a=candidate:$1 1 tcp "
             );
           }
 
@@ -652,13 +661,13 @@
           // First add b=AS for overall bandwidth
           sdpToUse = sdpToUse.replace(
             /(m=video.*\r\n)/g,
-            `$1b=AS:${Math.floor(maxBitrate / 1000)}\r\n`,
+            `$1b=AS:${Math.floor(maxBitrate / 1000)}\r\n`
           );
 
           // Also add TIAS bandwidth param for more precise control
           sdpToUse = sdpToUse.replace(
             /(m=video.*\r\n)/g,
-            `$1b=TIAS:${maxBitrate}\r\n`,
+            `$1b=TIAS:${maxBitrate}\r\n`
           );
 
           log("Setting local description");
@@ -666,7 +675,7 @@
             new RTCSessionDescription({
               type: "offer",
               sdp: sdpToUse,
-            }),
+            })
           );
 
           // Apply bitrate settings to video sender
@@ -735,7 +744,7 @@
             json = responseText ? JSON.parse(responseText) : null;
           } catch (e) {
             throw new Error(
-              `JSON parse error: ${e.message}, Raw text: ${responseText}`,
+              `JSON parse error: ${e.message}, Raw text: ${responseText}`
             );
           }
 
@@ -757,7 +766,7 @@
             new RTCSessionDescription({
               type: "answer",
               sdp: json.sdp,
-            }),
+            })
           );
 
           errorElement.textContent = "Connecting...waiting for ICE to complete";
@@ -947,11 +956,11 @@
                     const currentMaxBitrate = parseInt(maxBitrateInput.value);
                     const newMaxBitrate = Math.max(
                       300,
-                      Math.floor(currentMaxBitrate * 0.8),
+                      Math.floor(currentMaxBitrate * 0.8)
                     );
                     if (newMaxBitrate < currentMaxBitrate) {
                       log(
-                        `Auto-reducing bitrate due to bandwidth limitation to ${newMaxBitrate}kbps`,
+                        `Auto-reducing bitrate due to bandwidth limitation to ${newMaxBitrate}kbps`
                       );
                       maxBitrateInput.value = newMaxBitrate;
                       applyBitrateSettings();
@@ -1005,7 +1014,7 @@
                       ((videoBytesSent - (lastBytesSent - audioBytesSent)) *
                         8) /
                         timeDiff /
-                        1000,
+                        1000
                     )
                   : 0;
 
@@ -1015,7 +1024,7 @@
                       ((audioBytesSent - (lastBytesSent - videoBytesSent)) *
                         8) /
                         timeDiff /
-                        1000,
+                        1000
                     )
                   : 0;
 
@@ -1066,7 +1075,7 @@
               // Keep only data points from the last minute
               const minuteAgo = currentTimestamp - 60000;
               minuteDataPoints = minuteDataPoints.filter(
-                (point) => point.timestamp >= minuteAgo,
+                (point) => point.timestamp >= minuteAgo
               );
 
               // Calculate minute statistics
@@ -1099,7 +1108,7 @@
               // Keep only data points from the last hour
               const hourAgo = currentTimestamp - 3600000;
               hourDataPoints = hourDataPoints.filter(
-                (point) => point.timestamp >= hourAgo,
+                (point) => point.timestamp >= hourAgo
               );
 
               // Calculate hour statistics
@@ -1124,12 +1133,12 @@
 
               // Update total stats
               const totalDurationSeconds = Math.floor(
-                (currentTimestamp - streamStartTime) / 1000,
+                (currentTimestamp - streamStartTime) / 1000
               );
               const totalAvgBitrate =
                 totalDurationSeconds > 0
                   ? Math.round(
-                      (totalBytesSent * 8) / totalDurationSeconds / 1000,
+                      (totalBytesSent * 8) / totalDurationSeconds / 1000
                     )
                   : 0;
 
@@ -1208,7 +1217,7 @@
           const videoBpp = parseFloat(videoBppInput.value);
 
           currentBitrate = Math.round(
-            (videoWidth * videoHeight * videoFps * videoBpp) / 1000,
+            (videoWidth * videoHeight * videoFps * videoBpp) / 1000
           );
         }
 
@@ -1242,10 +1251,10 @@
         const serverBandwidthMbps = uploadBandwidthMbps * 1.5; // Add 50% overhead for server
 
         document.getElementById("estimate-upload").textContent = formatMbps(
-          uploadBandwidthMbps * 1000000,
+          uploadBandwidthMbps * 1000000
         );
         document.getElementById("estimate-server").textContent = formatMbps(
-          serverBandwidthMbps * 1000000,
+          serverBandwidthMbps * 1000000
         );
       }
 
@@ -1296,7 +1305,7 @@
 
           // Update the status
           errorElement.textContent = `API connection successful: ${JSON.stringify(
-            data,
+            data
           )}`;
 
           // Now test WebRTC port via a simple POST with similar headers
@@ -1484,7 +1493,7 @@
 
           // Calculate new bitrate based on resolution, framerate and bpp
           const calculatedBitrate = Math.round(
-            (videoWidth * videoHeight * videoFps * videoBpp) / 1000,
+            (videoWidth * videoHeight * videoFps * videoBpp) / 1000
           );
 
           // Apply video constraints
@@ -1502,7 +1511,7 @@
             // Set min bitrate to 70% of calculated
             minBitrateInput.value = Math.max(
               100,
-              Math.round(calculatedBitrate * 0.7),
+              Math.round(calculatedBitrate * 0.7)
             );
             // Set max bitrate to 130% of calculated
             maxBitrateInput.value = Math.round(calculatedBitrate * 1.3);
@@ -1581,7 +1590,7 @@
             const bestHeight = commonHeights.reduce((prev, curr) =>
               Math.abs(curr - maxHeight) < Math.abs(prev - maxHeight)
                 ? curr
-                : prev,
+                : prev
             );
 
             const bestWidth = Math.round((bestHeight * aspectRatio) / 16) * 16; // Round to multiple of 16

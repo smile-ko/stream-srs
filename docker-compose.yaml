@@ -16,3 +16,32 @@ services:
     restart: unless-stopped
     tty: true
     stdin_open: true
+
+  coturn:
+    image: coturn/coturn
+    container_name: coturn
+    restart: always
+    environment:
+      - REALM=localhost
+      - USERNAME=coturn
+      - PASSWORD=coturn
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "5349:5349/tcp"
+      - "5349:5349/udp"
+      - "49160-49200:49160-49200/udp"
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    depends_on:
+      - srs
+      - coturn
+    ports:
+      - "80:80"
+    volumes:
+      - ./html:/usr/share/nginx/html
+    restart: unless-stopped
